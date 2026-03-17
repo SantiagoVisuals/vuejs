@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>NOIRE — Tienda de Moda</title>
+  <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.prod.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- ══════════════════════════════════════════════════════
+       HEADER — Logo, navegación y botón de carrito
+       ══════════════════════════════════════════════════════ -->
+  <header>
+    <span class="logo">NO<span>I</span>RE</span>
+    <nav class="nav-links">
+      <a @click="setCategory('all')">Colección</a>
+      <a @click="setCategory('ropa')">Ropa</a>
+      <a @click="setCategory('accesorios')">Accesorios</a>
+      <a @click="setCategory('calzado')">Calzado</a>
+    </nav>
+    <button class="cart-btn" @click="cartOpen = true">
+      Carrito
+      <span class="cart-badge" v-if="cart.length > 0">{{ cart.length }}</span>
+    </button>
+  </header>
+
+  <!-- ══════════════════════════════════════════════════════
+       HERO — Sección principal con CTA y estadísticas
+       ══════════════════════════════════════════════════════ -->
+  <section class="hero">
+    <div class="hero-text">
+      <p class="hero-eyebrow">Colección Primavera — 2026</p>
+      <h1 class="hero-title">
+        Moda que<br>habla <em>sin</em><br>palabras.
+      </h1>
+      <p class="hero-desc">
+        Piezas cuidadosamente seleccionadas para quienes entienden que el estilo no es una elección, es una declaración.
+      </p>
+      <button class="hero-cta" @click="setCategory('all')">Explorar colección</button>
+      <div class="hero-stats">
+        <div>
+          <div class="stat-num">{{ products.length }}</div>
+          <div class="stat-label">Productos</div>
+        </div>
+        <div>
+          <div class="stat-num">{{ categories.length - 1 }}</div>
+          <div class="stat-label">Categorías</div>
+        </div>
+        <div>
+          <div class="stat-num">{{ cart.length }}</div>
+          <div class="stat-label">En carrito</div>
+        </div>
+      </div>
+    </div>
+    <div class="hero-visual">
+      <div class="hero-card">
+        <span class="hero-card-label">Tendencia destacada</span>
+        <span class="hero-card-val">Monocromático Oscuro</span>
+      </div>
+      <div class="hero-card">
+        <span class="hero-card-label">Envío</span>
+        <span class="hero-card-val">Gratis +$200k</span>
+      </div>
+      <div class="hero-card">
+        <span class="hero-card-label">Devolución</span>
+        <span class="hero-card-val">30 días</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════
+       CONTROLES — Buscador, filtros y ordenamiento
+       ══════════════════════════════════════════════════════ -->
+  <div class="controls">
+    <div class="search-wrap">
+      <span class="search-icon">⌕</span>
+      <input
+        type="text"
+        v-model="search"
+        placeholder="Buscar productos…"
+      />
+    </div>
+    <button
+      v-for="cat in categories"
+      :key="cat.value"
+      class="filter-btn"
+      :class="{ active: selectedCategory === cat.value }"
+      @click="setCategory(cat.value)"
+    >
+      {{ cat.label }}
+    </button>
+    <select class="sort-select" v-model="sortBy">
+      <option value="default">Ordenar</option>
+      <option value="price-asc">Precio ↑</option>
+      <option value="price-desc">Precio ↓</option>
+      <option value="name">Nombre A-Z</option>
+      <option value="rating">Mejor rating</option>
+    </select>
+    <span class="results-count">{{ filteredProducts.length }} resultado(s)</span>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════
+       PRODUCTOS — Grid con componentes product-card y empty-state
+       ══════════════════════════════════════════════════════ -->
+  <main class="products-section">
+    <h2 class="products-section-title">
+      {{ selectedCategory === 'all' ? 'Todos los productos' : categoryLabel }}
+    </h2>
+    <div class="products-grid">
+      <transition-group name="fade" tag="div" style="display:contents">
+
+        <!-- Componente: Estado vacío -->
+        <empty-state
+          v-if="filteredProducts.length === 0"
+          key="empty"
+          :search="search"
+          @clear="search = ''"
+        ></empty-state>
+
+        <!-- Componente: Tarjeta de producto -->
+        <product-card
+          v-for="product in filteredProducts"
+          :key="product.id"
+          :product="product"
+          :just-added="justAdded"
+          @add-to-cart="addToCart"
+          @select-color="selectColor"
+        ></product-card>
+
+      </transition-group>
+    </div>
+  </main>
+
+  <!-- ══════════════════════════════════════════════════════
+       CARRITO — Componente cart-drawer (overlay + panel)
+       ══════════════════════════════════════════════════════ -->
+  <cart-drawer
+    :open="cartOpen"
+    :cart="cart"
+    :cart-total="cartTotal"
+    @close="cartOpen = false"
+    @remove="removeFromCart"
+    @checkout="checkout"
+  ></cart-drawer>
+
+  <!-- TOAST -->
+  <div class="toast" :class="{ show: toastVisible }">{{ toastMsg }}</div>
+
+  <!-- ══════════════════════════════════════════════════════
+       FOOTER
+       ══════════════════════════════════════════════════════ -->
+  <footer>
+    <div class="footer-brand">
+      <span class="logo">NO<span>I</span>RE</span>
+      <p class="footer-desc">Moda editorial para quienes viven con intención. Cada pieza, una declaración.</p>
+    </div>
+    <div class="footer-col">
+      <h4>Colección</h4>
+      <a>Ropa mujer</a>
+      <a>Ropa hombre</a>
+      <a>Accesorios</a>
+      <a>Calzado</a>
+    </div>
+    <div class="footer-col">
+      <h4>Ayuda</h4>
+      <a>Envíos</a>
+      <a>Devoluciones</a>
+      <a>Tallas</a>
+      <a>Contacto</a>
+    </div>
+    <div class="footer-col">
+      <h4>Marca</h4>
+      <a>Nosotros</a>
+      <a>Sostenibilidad</a>
+      <a>Colaboraciones</a>
+      <a>Instagram</a>
+    </div>
+  </footer>
+  <div class="footer-bottom">
+    <span>© 2026 NOIRE — Todos los derechos reservados</span>
+    <span>Vue.js 3 — Módulos ES6</span>
+  </div>
+
+</div>
+
+<!-- App principal como módulo ES6 -->
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
